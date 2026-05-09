@@ -1,0 +1,106 @@
+flowchart TD
+  %% =========================
+  %% Client Channels
+  %% =========================
+  subgraph CHANNELS[Customer & Staff Channels]
+    WEB[Customer Web UI\nReact web app]
+    IG[Instagram DM]
+    PHONE[Phone Call]
+    ADMIN[Staff/Admin UI\nReact web app]
+  end
+
+  %% =========================
+  %% Voice Stack
+  %% =========================
+  subgraph VOICE[Phone Voice Stack]
+    TEL[Telephony Provider\nTwilio / Vonage / SIP]
+    STT[Speech-to-Text]
+    TTS[Text-to-Speech]
+  end
+
+  %% =========================
+  %% AI Layer
+  %% =========================
+  subgraph AI[AI Layer]
+    AGENT[AI Agent Orchestrator]
+    LLM[Llama-family Model\nServed by Ollama now / vLLM later]
+    TOOLS[Tool Calling Layer]
+  end
+
+  %% =========================
+  %% Backend
+  %% =========================
+  subgraph BACKEND[FastAPI Backend]
+    API[Booking API]
+    AUTH[Auth + Verification]
+    SCHED[Scheduling Service\nAvailability + Groomer Assignment]
+    NOTIFY[Notification Service]
+    WS[WebSocket Gateway]
+    WORKER[Background Worker\nCelery / RQ]
+  end
+
+  %% =========================
+  %% Data Stores
+  %% =========================
+  subgraph DATA[Data Stores]
+    DB[(PostgreSQL\nCustomers / Dogs / Bookings / Groomers / Audits)]
+    REDIS[(Redis\nPub/Sub / Queues / Sessions)]
+    AILOGS[(AI Interaction Logs\nPrompts / Intents / Tool Calls / Corrections)]
+    TRAIN[(Curated Training Data\nRedacted / Reviewed)]
+  end
+
+  %% =========================
+  %% Future Model
+  %% =========================
+  subgraph FUTURE[Future AI IP]
+    DATASET[Fine-tuning Dataset]
+    INHOUSE[Future In-house LLM]
+  end
+
+  %% Main customer / staff entrypoints
+  WEB --> AGENT
+  IG --> AGENT
+  PHONE --> TEL
+  TEL --> STT
+  STT --> AGENT
+  ADMIN --> API
+
+  %% AI path
+  AGENT --> LLM
+  AGENT --> TOOLS
+  TOOLS --> AUTH
+  AUTH --> API
+
+  %% Backend services
+  API --> SCHED
+  API --> NOTIFY
+  API --> WS
+  API --> WORKER
+  API --> DB
+  API --> AILOGS
+  AGENT --> AILOGS
+
+  %% Realtime and queue infrastructure
+  REDIS --> WS
+  WORKER --> REDIS
+  WORKER --> NOTIFY
+  WORKER --> DB
+
+  %% Live clients
+  WS --> WEB
+  WS --> ADMIN
+
+  %% Voice response
+  AGENT --> TTS
+  TTS --> TEL
+  TEL --> PHONE
+
+  %% Future model training path
+  AILOGS --> TRAIN
+  TRAIN --> DATASET
+  DATASET --> INHOUSE
+  INHOUSE -. future replacement .-> LLM
+
+  %% Layout helpers
+  SCHED --> DB
+  NOTIFY --> REDIS
