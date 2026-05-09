@@ -12,6 +12,7 @@ The system must also support:
 - Shared update capability for both staff and owners
 - Channel-specific customer verification before sensitive reads or writes
 - A future in-house LLM based on Llama without coupling core business logic to any one model
+- Reusable multi-tenant platform
 
 ## 2. High-Level Flow
 
@@ -59,6 +60,12 @@ The intended operating model is bounded autonomy:
 - The agent can choose from approved backend tools
 - The agent is not allowed to invent new business actions outside approved tool boundaries
 - Sensitive actions such as booking changes, payment changes, or protected status access must still pass backend verification and confirmation rules
+
+The AI layer should also be reusable across clients:
+
+- Core orchestration, tool-calling, and safety rules should be shared
+- Client-specific prompts, policies, branding, and knowledge should be injected through configuration
+- Client onboarding should not require forking the core agent runtime unless there is a true product-domain difference
 
 ### LLM Runtime
 
@@ -232,7 +239,32 @@ Architecture-level privacy expectations:
 - Support customer access/correction workflows for personal information held by the system
 - Maintain a breach-response process suitable for Australian notifiable data breach obligations if the business falls under the Privacy Act
 
-## 5. Data Collection for Future In-House LLM
+## 5. Deployment and Runtime Model
+
+The system should use:
+
+- Dockerized application services
+- Self-managed AWS EC2 infrastructure
+- GitHub Actions for CI/CD
+- Ansible for provisioning and deployment automation
+- Nginx as the reverse proxy/web entry layer where needed
+- Alembic for PostgreSQL schema migrations
+- AWS KMS-backed secret handling for service-to-service credentials and other sensitive runtime secrets
+- Prometheus + Grafana style monitoring for services, jobs, and infrastructure
+- A monorepo with a modular monolith backend
+- Separate runtime deployment for API, worker, and AI-serving components where needed
+
+This architecture is designed to scale horizontally at the API layer behind a load balancer without forcing early microservices or Kubernetes.
+
+Detailed deployment, topology, CI/CD, scaling, and operational guidance is documented in [infra.md](infra.md).
+
+Tenant-aware deployment expectations:
+
+- Application services should remain reusable across clients/tenants
+- Tenant identity must flow through APIs, logs, jobs, notifications, and AI interactions
+- Client-specific configuration should be injected without requiring separate codebases for each client
+
+## 6. Data Collection for Future In-House LLM
 
 The system should log structured interaction data from day one.
 
@@ -264,7 +296,7 @@ Training pipeline guidance:
 - Version datasets separately from production logs
 - Keep the Llama fine-tuning path behind a model adapter so inference infrastructure can evolve without changing business APIs
 
-## 6. Recommended Build Phases
+## 7. Recommended Build Phases
 
 ### Phase 1: Core Booking System
 
@@ -273,6 +305,7 @@ Training pipeline guidance:
 - Customer and dog records
 - Booking creation/reschedule/cancel
 - Scheduling engine with duration calculation and conflict protection
+- Initial Docker, EC2, CI/CD, and deployment automation setup
 - Staff daily schedule view
 - Manual payment status
 - Manual dog grooming status updates
@@ -294,6 +327,7 @@ Training pipeline guidance:
 - 4-week rebooking reminders
 - SMS/email notifications
 - Notification retry worker
+- Operational monitoring for scheduled jobs
 
 ### Phase 4: Phone AI Agent
 
@@ -321,7 +355,7 @@ Even if only one client is active at first, tenant identifiers and tenant-safe d
 - Evaluate against production logs
 - Swap model through LLM provider adapter
 
-## 7. Design Principles
+## 8. Design Principles
 
 1. Keep AI replaceable.
 2. Keep business rules in FastAPI, not prompts.
@@ -331,5 +365,6 @@ Even if only one client is active at first, tenant identifiers and tenant-safe d
 6. Make scheduling rules explicit, transactional, and idempotent.
 7. Separate business audit logs from AI training data.
 8. Use bounded AI autonomy: natural conversation and approved tools, but no open-ended business actions.
-9. Log every agent decision for future model improvement.
-10. Start with one client, but design for multi-tenant expansion.
+9. Prefer Dockerized services on a monorepo/modular-monolith foundation until scale or ownership pressures justify service splits.
+10. Log every agent decision for future model improvement.
+11. Start with one client, but design for multi-tenant expansion.

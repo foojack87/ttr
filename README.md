@@ -2,6 +2,8 @@
 
 This repository contains the initial technical architecture for an AI-assisted scheduling product for TTR.
 
+The platform should be designed so core scheduling, communications, and AI orchestration capabilities can be reused for additional clients over time.
+
 The system supports customer booking and appointment management through multiple channels:
 
 - Web agent
@@ -18,6 +20,13 @@ This means:
 - The backend owns scheduling rules, identity checks, permissions, and audit history
 - The AI agent can assist with conversation and tool selection, but it cannot bypass backend validation
 - Production audit logs and future LLM training data are related but separate concerns
+
+## Platform Direction
+
+- multi-tenant/client on a reusable platform
+- Core backend logic should be tenant-aware rather than client-specific
+- The AI layer should be reusable across clients through shared tooling and orchestration
+- Client-specific behavior should come from configuration, policies, branding, and knowledge, not hard-coded forks wherever possible
 
 ## Proposed Tech Stack
 
@@ -125,7 +134,23 @@ Because the system is intended for deployment in Australia, it should be designe
 - Review overseas vendors and hosted services for cross-border personal data handling
 - Prepare for notifiable data breach response even if the initial deployment is small
 
+## Deployment and Delivery
+
+- Use Docker for application services
+- Deploy onto self-managed AWS EC2 infrastructure
+- Use GitHub Actions for CI/CD and Ansible for provisioning/deployment automation
+- Use Nginx as the reverse proxy/web server layer on EC2 hosts where needed
+- Use Alembic for PostgreSQL schema migrations
+- Use AWS KMS-backed secret management for machine-to-machine credentials and sensitive application secrets
+- Use Prometheus + Grafana style monitoring for service, job, and infrastructure visibility
+- Separate `dev`, `staging`, and `production` environments
+- Use a monorepo and start with a modular monolith, not early microservices
+- Scale API instances horizontally behind a load balancer; scale workers and AI-serving separately as needed
+
+Detailed infrastructure guidance lives in [Infrastructure](docs/infra.md).
+
 ## Documents
 
 - [Architecture](docs/architecture.md)
+- [Infrastructure](docs/infra.md)
 - [Mermaid Diagram](docs/architecture.mmd)
